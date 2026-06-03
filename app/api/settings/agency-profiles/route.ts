@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
 import {
+  AdminLockError,
+  assertAdminUnlocked,
   deleteAgencyProfile,
   getActiveProfileFromRequest,
-  isAdminPinConfigured,
-  isAdminUnlocked,
   listAgencyProfiles,
   saveAgencyProfile,
 } from "@/lib/agency-profiles";
@@ -32,12 +32,6 @@ FROM AGENCE
 ORDER BY COD_AGENCE;
 `);
   return (result.recordset ?? []) as AgencyOption[];
-}
-
-function assertAdminUnlocked(req: Request) {
-  if (isAdminPinConfigured() && !isAdminUnlocked(req)) {
-    throw new Error("Parametrage verrouille.");
-  }
 }
 
 export async function GET(req: Request) {
@@ -76,7 +70,7 @@ export async function POST(req: Request) {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erreur inconnue";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: message }, { status: error instanceof AdminLockError ? 403 : 400 });
   }
 }
 
@@ -97,7 +91,7 @@ export async function PUT(req: Request) {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erreur inconnue";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: message }, { status: error instanceof AdminLockError ? 403 : 400 });
   }
 }
 
@@ -113,6 +107,6 @@ export async function DELETE(req: Request) {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erreur inconnue";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: message }, { status: error instanceof AdminLockError ? 403 : 400 });
   }
 }

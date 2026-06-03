@@ -7,7 +7,7 @@ import {
   saveAgencySettings,
   type AgencySettings,
 } from "@/lib/agency-settings";
-import { getActiveProfileFromRequest } from "@/lib/agency-profiles";
+import { AdminLockError, assertAdminUnlocked, getActiveProfileFromRequest } from "@/lib/agency-profiles";
 import { sqlCacheClear } from "@/lib/sql-cache";
 
 export const dynamic = "force-dynamic";
@@ -80,6 +80,7 @@ export async function GET(req: Request) {
 
 export async function PUT(req: Request) {
   try {
+    assertAdminUnlocked(req);
     const body = await readBody(req);
     const activeProfile = getActiveProfileFromRequest(req);
     const centralAgencyCode = normalizeAgencyCode(body.centralAgencyCode);
@@ -97,6 +98,6 @@ export async function PUT(req: Request) {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erreur inconnue";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: message }, { status: error instanceof AdminLockError ? 403 : 400 });
   }
 }

@@ -198,6 +198,19 @@ export function isAdminUnlocked(req: Request): boolean {
   return Number.isFinite(timestamp) && Date.now() - timestamp < ADMIN_UNLOCK_SECONDS * 1000;
 }
 
+export class AdminLockError extends Error {
+  constructor() {
+    super("Parametrage verrouille.");
+    this.name = "AdminLockError";
+  }
+}
+
+export function assertAdminUnlocked(req: Request): void {
+  if (isAdminPinConfigured() && !isAdminUnlocked(req)) {
+    throw new AdminLockError();
+  }
+}
+
 export function verifyAdminPin(pin: unknown): void {
   const row = securityRow();
   if (!row.admin_pin_hash || !row.admin_pin_salt) {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import sql from "mssql";
+import { AdminLockError, assertAdminUnlocked } from "@/lib/agency-profiles";
 import { resetSqlPool } from "@/lib/db";
 import { sqlCacheClear } from "@/lib/sql-cache";
 import {
@@ -26,6 +27,7 @@ export async function GET() {
 
 export async function PUT(req: Request) {
   try {
+    assertAdminUnlocked(req);
     const body = await readBody(req);
     const settings = saveSqlSettings(body);
     await resetSqlPool();
@@ -37,7 +39,7 @@ export async function PUT(req: Request) {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erreur inconnue";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: message }, { status: error instanceof AdminLockError ? 403 : 400 });
   }
 }
 
@@ -46,6 +48,7 @@ export async function POST(req: Request) {
   let pool: InstanceType<typeof sql.ConnectionPool> | undefined;
 
   try {
+    assertAdminUnlocked(req);
     const body = await readBody(req);
     const settings = resolveSqlSettingsInput(body);
     pool = await new sql.ConnectionPool(buildMssqlConfig(settings)).connect();
@@ -68,7 +71,7 @@ SELECT
     const message = error instanceof Error ? error.message : "Erreur inconnue";
     return NextResponse.json(
       { ok: false, error: message, elapsedMs: Date.now() - startedAt },
-      { status: 400 },
+      { status: error instanceof AdminLockError ? 403 : 400 },
     );
   } finally {
     if (pool) {

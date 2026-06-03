@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
+import { AdminLockError, assertAdminUnlocked } from "@/lib/agency-profiles";
 import {
   getPublicBrandingSettings,
   saveBrandingSettings,
@@ -70,6 +71,7 @@ export async function GET() {
 
 export async function PUT(req: Request) {
   try {
+    assertAdminUnlocked(req);
     const body = await readJsonBody(req);
     const settings = saveBrandingSettings(body);
     return NextResponse.json(
@@ -78,12 +80,13 @@ export async function PUT(req: Request) {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erreur inconnue";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: message }, { status: error instanceof AdminLockError ? 403 : 400 });
   }
 }
 
 export async function POST(req: Request) {
   try {
+    assertAdminUnlocked(req);
     const formData = await req.formData();
     const appName = String(formData.get("appName") ?? "").trim();
     const logo = formData.get("logo");
@@ -96,6 +99,6 @@ export async function POST(req: Request) {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erreur inconnue";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: message }, { status: error instanceof AdminLockError ? 403 : 400 });
   }
 }

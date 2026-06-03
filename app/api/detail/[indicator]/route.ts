@@ -17,8 +17,9 @@ import { CREDIT_LOSS_STOCK_CTE } from "@/lib/credit-loss-stock-sql";
 import { getPool } from "@/lib/db";
 import { MOBILE_MONEY_CTE } from "@/lib/mobile-money-sql";
 import { getObjectifs, LOWER_IS_BETTER } from "@/lib/objectifs";
+import { sqlCache } from "@/lib/sql-cache";
 import { TREASURY_CTE } from "@/lib/treasury-sql";
-import { addAsOfDateInput, AS_OF_DATE_SQL, parseAsOfDateParam } from "@/lib/as-of-date";
+import { addAsOfDateInput, AS_OF_DATE_SQL, asOfDateCachePart, parseAsOfDateParam } from "@/lib/as-of-date";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -44,6 +45,12 @@ function addAgencyInputs(request: MssqlRequest, scope: AgencyScope) {
 
 function addDetailInputs(request: MssqlRequest, scope: AgencyScope, asOfDate: string | null) {
   return addAsOfDateInput(addAgencyInputs(request, scope), asOfDate);
+}
+
+function detailScopeCachePart(scope: AgencyScope): string {
+  return scope.profileActive
+    ? `profile-${scope.activeProfile?.id ?? "unknown"}-${scope.agencyCodes.join("_")}`
+    : `${scope.centralAgencyCode}:${scope.includeCentralAgency ? "with-faitiere" : "without-faitiere"}`;
 }
 
 const LOAN_CTEAS_DETAIL = `
@@ -86,6 +93,7 @@ LoanPortfolio AS (
     AND p.NUM_DOSSIER LIKE '%PRT%'
     AND EXISTS (SELECT 1 FROM DECAIS dc WHERE dc.NUM_DOSSIER=p.NUM_DOSSIER AND dc.DATE_DECAIS<=@AsOfDate)
     AND NOT EXISTS (SELECT 1 FROM LossLoans ll WHERE ll.NUM_DOSSIER=p.NUM_DOSSIER)
+    AND ${agencyScopeSql("LEFT(p.NUM_DOSSIER, 3)")}
 )
 `;
 
@@ -145,6 +153,7 @@ SELECT
 FROM AGENCE a
 LEFT JOIN ParAgg pa
   ON pa.agencyCode = a.COD_AGENCE
+WHERE ${agencyScopeSql("a.COD_AGENCE")}
 ORDER BY valeur DESC;`;
 }
 
@@ -165,11 +174,14 @@ WITH NewAdh AS (
   FROM ADHERENT adh
   WHERE adh.DATE_INSCRIP >= @MonthStart
     AND adh.DATE_INSCRIP < DATEADD(DAY, 1, @AsOfDate)
+    AND ${agencyScopeSql("adh.COD_AGENCE")}
   GROUP BY adh.COD_AGENCE
 ),
 TotalAdh AS (
   SELECT adh.COD_AGENCE, CAST(COUNT_BIG(*) AS bigint) AS total
-  FROM ADHERENT adh GROUP BY adh.COD_AGENCE
+  FROM ADHERENT adh
+  WHERE ${agencyScopeSql("adh.COD_AGENCE")}
+  GROUP BY adh.COD_AGENCE
 )
 SELECT
   a.COD_AGENCE    AS agencyCode,
@@ -180,6 +192,7 @@ SELECT
 FROM AGENCE a
 LEFT JOIN NewAdh  na ON na.COD_AGENCE = a.COD_AGENCE
 LEFT JOIN TotalAdh ta ON ta.COD_AGENCE = a.COD_AGENCE
+WHERE ${agencyScopeSql("a.COD_AGENCE")}
 ORDER BY valeur DESC;`,
   },
 
@@ -201,6 +214,7 @@ SELECT
   ISNULL(la.valeur, 0) AS valeur,
   CAST(ISNULL(la.loans, 0) AS bigint) AS count
 FROM AGENCE a LEFT JOIN LoanAgg la ON la.agencyCode = a.COD_AGENCE
+WHERE ${agencyScopeSql("a.COD_AGENCE")}
 ORDER BY valeur DESC;`,
   },
 
@@ -220,6 +234,7 @@ WITH SavingsAccounts AS (
     ON c.NUM_CPTE COLLATE DATABASE_DEFAULT = ce.NUM_CPTE COLLATE DATABASE_DEFAULT
   WHERE (ce.DATE_CLOTURE IS NULL OR ce.DATE_CLOTURE > @AsOfDate)
     AND (c.DATE_CLOTURE IS NULL OR c.DATE_CLOTURE > @AsOfDate)
+    AND ${agencyScopeSql("c.COD_AGENCE")}
 
   UNION
 
@@ -231,6 +246,7 @@ WITH SavingsAccounts AS (
     ON c.NUM_CPTE COLLATE DATABASE_DEFAULT = cd.NUM_CPTE COLLATE DATABASE_DEFAULT
   WHERE (cd.DATE_CLOTURE IS NULL OR cd.DATE_CLOTURE > @AsOfDate)
     AND (c.DATE_CLOTURE IS NULL OR c.DATE_CLOTURE > @AsOfDate)
+    AND ${agencyScopeSql("c.COD_AGENCE")}
 
   UNION
 
@@ -240,6 +256,7 @@ WITH SavingsAccounts AS (
   FROM T_COMPTES tc
   WHERE (tc.DATE_CLOTURE IS NULL OR tc.DATE_CLOTURE > @AsOfDate)
     AND (tc.ETAT_CLOTURE IS NULL OR tc.ETAT_CLOTURE = 0 OR tc.DATE_CLOTURE > @AsOfDate)
+    AND ${agencyScopeSql("tc.CODE_AGENCE")}
 
   UNION
 
@@ -249,6 +266,7 @@ WITH SavingsAccounts AS (
   FROM COMPTES c
   WHERE c.CPTE_GAL = '251214'
     AND (c.DATE_CLOTURE IS NULL OR c.DATE_CLOTURE > @AsOfDate)
+    AND ${agencyScopeSql("c.COD_AGENCE")}
 ),
 SavingsAccountBalances AS (
   SELECT
@@ -283,6 +301,7 @@ SELECT
 FROM AGENCE a
 LEFT JOIN SavingsAgg sa
   ON sa.agencyCode COLLATE DATABASE_DEFAULT = a.COD_AGENCE COLLATE DATABASE_DEFAULT
+WHERE ${agencyScopeSql("a.COD_AGENCE")}
 ORDER BY valeur DESC;`,
   },
 
@@ -333,6 +352,7 @@ WITH ResultByAgency AS (
   WHERE h.DATE_OPERATION >= @ExerciseStart
     AND h.DATE_OPERATION < DATEADD(DAY, 1, @AsOfDate)
     AND (h.NUM_CPTE LIKE '7%' OR h.NUM_CPTE LIKE '6%')
+    AND ${agencyScopeSql("c.COD_AGENCE")}
   GROUP BY c.COD_AGENCE
 )
 SELECT
@@ -341,6 +361,7 @@ SELECT
   ISNULL(r.valeur, 0) AS valeur,
   CAST(ISNULL(r.[count], 0) AS bigint) AS [count]
 FROM AGENCE a LEFT JOIN ResultByAgency r ON r.COD_AGENCE=a.COD_AGENCE
+WHERE ${agencyScopeSql("a.COD_AGENCE")}
 ORDER BY valeur DESC;`,
   },
 
@@ -362,6 +383,7 @@ LEFT JOIN T_OPERATION op ON op.NUM_CMPTE COLLATE DATABASE_DEFAULT = c.NUM_CPTE C
   AND op.TYPE_OP IN ('D','C','A')
   AND op.DATE_VALIDATION >= @MonthStart
   AND op.DATE_VALIDATION < DATEADD(DAY, 1, @AsOfDate)
+WHERE ${agencyScopeSql("a.COD_AGENCE")}
 GROUP BY a.COD_AGENCE, a.RAISON_SOCIAL
 ORDER BY valeur DESC;`,
   },
@@ -394,6 +416,7 @@ SELECT
 FROM AGENCE a
 LEFT JOIN CashAgg ca
   ON ca.agencyCode = a.COD_AGENCE COLLATE DATABASE_DEFAULT
+WHERE ${agencyScopeSql("a.COD_AGENCE")}
 ORDER BY valeur DESC;`,
   },
 
@@ -413,6 +436,7 @@ MobileMoneyAgg AS (
     CAST(COUNT_BIG(*) AS bigint) AS count
   FROM MobileMoneyOperations
   WHERE agencyCode IS NOT NULL
+    AND ${agencyScopeSql("agencyCode")}
   GROUP BY agencyCode
 )
 SELECT
@@ -425,6 +449,7 @@ SELECT
 FROM AGENCE a
 LEFT JOIN MobileMoneyAgg mma
   ON mma.agencyCode = a.COD_AGENCE COLLATE DATABASE_DEFAULT
+WHERE ${agencyScopeSql("a.COD_AGENCE")}
 ORDER BY valeur DESC;`,
   },
 
@@ -444,6 +469,7 @@ TreasuryAgg AS (
     CAST(COUNT_BIG(*) AS bigint) AS count
   FROM TreasuryBalances
   WHERE agencyCode IS NOT NULL
+    AND ${agencyScopeSql("agencyCode")}
   GROUP BY agencyCode
 )
 SELECT
@@ -456,6 +482,7 @@ SELECT
 FROM AGENCE a
 LEFT JOIN TreasuryAgg ta
   ON ta.agencyCode = a.COD_AGENCE COLLATE DATABASE_DEFAULT
+WHERE ${agencyScopeSql("a.COD_AGENCE")}
 ORDER BY valeur DESC;`,
   },
 
@@ -472,6 +499,7 @@ WITH DecaisAgg AS (
   FROM DECAIS d
   WHERE d.DATE_DECAIS >= @MonthStart
     AND d.DATE_DECAIS <= @AsOfDate
+    AND ${agencyScopeSql("LEFT(d.NUM_DOSSIER, 3)")}
   GROUP BY LEFT(d.NUM_DOSSIER,3)
 )
 SELECT
@@ -480,6 +508,7 @@ SELECT
   ISNULL(da.valeur, 0) AS valeur,
   ISNULL(da.count, 0)  AS count
 FROM AGENCE a LEFT JOIN DecaisAgg da ON da.agencyCode=a.COD_AGENCE
+WHERE ${agencyScopeSql("a.COD_AGENCE")}
 ORDER BY valeur DESC;`,
   },
 
@@ -517,6 +546,7 @@ EligibleLoans AS (
   FROM PRETS p
   LEFT JOIN LossDates ld ON ld.NUM_DOSSIER = p.NUM_DOSSIER
   WHERE p.COD_SRCEFIN NOT IN ('02','07')
+    AND ${agencyScopeSql("LEFT(p.NUM_DOSSIER, 3)")}
     AND (
       (p.ETAT_PRET IN ('DC','SO') AND ISNULL(ld.trpeCount, 0) = 0)
       OR (p.ETAT_PRET = 'SD' AND p.DATE_SOLDE > @AsOfDate)
@@ -548,6 +578,7 @@ SELECT
   ISNULL(ia.valeur, 0) AS valeur,
   ISNULL(ia.count,  0) AS count
 FROM AGENCE a LEFT JOIN ImpayesAgg ia ON ia.agencyCode=a.COD_AGENCE
+WHERE ${agencyScopeSql("a.COD_AGENCE")}
 ORDER BY valeur DESC;`,
   },
 
@@ -565,6 +596,7 @@ PerteAgg AS (
     SUM(CAST(ISNULL(stockAmount, 0) AS MONEY)) AS valeur,
     CAST(COUNT_BIG(*) AS bigint) AS count
   FROM CreditLossStock
+  WHERE ${agencyScopeSql("agencyCode")}
   GROUP BY agencyCode
 )
 SELECT
@@ -573,6 +605,7 @@ SELECT
   ISNULL(pa.valeur, 0) AS valeur,
   ISNULL(pa.count,  0) AS count
 FROM AGENCE a LEFT JOIN PerteAgg pa ON pa.agencyCode=a.COD_AGENCE
+WHERE ${agencyScopeSql("a.COD_AGENCE")}
 ORDER BY valeur DESC;`,
   },
 
@@ -590,6 +623,7 @@ PerteAgg AS (
     SUM(CAST(ISNULL(transferredAmount,0) AS MONEY)) AS valeur,
     CAST(COUNT_BIG(DISTINCT numDossier) AS bigint) AS count
   FROM CreditLossTransfers
+  WHERE ${agencyScopeSql("agencyCode")}
   GROUP BY agencyCode
 )
 SELECT
@@ -598,6 +632,7 @@ SELECT
   ISNULL(pa.valeur, 0) AS valeur,
   ISNULL(pa.count,  0) AS count
 FROM AGENCE a LEFT JOIN PerteAgg pa ON pa.agencyCode=a.COD_AGENCE
+WHERE ${agencyScopeSql("a.COD_AGENCE")}
 ORDER BY valeur DESC;`,
   },
 
@@ -615,6 +650,7 @@ WITH RecAgg AS (
   FROM CREDIT_PERTE cp
   WHERE cp.DATE_OPERATION >= @MonthStart
     AND cp.DATE_OPERATION <= @AsOfDate
+    AND ${agencyScopeSql("LEFT(cp.NUM_DOSSIER, 3)")}
   GROUP BY LEFT(cp.NUM_DOSSIER,3)
 )
 SELECT
@@ -623,6 +659,7 @@ SELECT
   ISNULL(ra.valeur, 0) AS valeur,
   ISNULL(ra.count,  0) AS count
 FROM AGENCE a LEFT JOIN RecAgg ra ON ra.agencyCode=a.COD_AGENCE
+WHERE ${agencyScopeSql("a.COD_AGENCE")}
 ORDER BY valeur DESC;`,
   },
 
@@ -639,6 +676,7 @@ WITH SouscAgg AS (
   FROM T_ADHERENT ta
   WHERE ta.DATE_INSCRIPT_ADHE >= @MonthStart
     AND ta.DATE_INSCRIPT_ADHE <= @AsOfDate
+    AND ${agencyScopeSql("ta.CODE_AGENCE")}
   GROUP BY ta.CODE_AGENCE COLLATE DATABASE_DEFAULT
 )
 SELECT
@@ -647,6 +685,7 @@ SELECT
   ISNULL(sa.valeur, 0) AS valeur,
   ISNULL(sa.valeur, 0) AS count
 FROM AGENCE a LEFT JOIN SouscAgg sa ON sa.agencyCode = a.COD_AGENCE COLLATE DATABASE_DEFAULT
+WHERE ${agencyScopeSql("a.COD_AGENCE")}
 ORDER BY valeur DESC;`,
   },
 };
@@ -693,17 +732,28 @@ export async function GET(
       ...getPublicAgencySettings(),
       ...publicAgencyScope(scope),
     };
-    const pool = await getPool();
+    const forceRefresh = new URL(req.url).searchParams.has("refresh");
+    const detailData = await sqlCache(
+      `detail:${indicator}:${detailScopeCachePart(scope)}:${asOfDateCachePart(requestedAsOfDate)}`,
+      async () => {
+        const pool = await getPool();
+        const [result, trendResult] = await Promise.all([
+          addDetailInputs(pool.request(), scope, requestedAsOfDate).query(config.query),
+          indicator === "adhesions"
+            ? addDetailInputs(pool.request(), scope, requestedAsOfDate).query(TREND_QUERY_ADHESIONS)
+            : Promise.resolve(null),
+        ]);
 
-    // Requête principale + tendance mensuelle (uniquement pour adhesions)
-    const [result, trendResult] = await Promise.all([
-      addDetailInputs(pool.request(), scope, requestedAsOfDate).query(config.query),
-      indicator === "adhesions"
-        ? addDetailInputs(pool.request(), scope, requestedAsOfDate).query(TREND_QUERY_ADHESIONS)
-        : Promise.resolve(null),
-    ]);
+        return {
+          rows: (result.recordset ?? []) as Array<Record<string, unknown>>,
+          trend: (trendResult?.recordset ?? null) as Array<Record<string, unknown>> | null,
+        };
+      },
+      undefined,
+      { forceRefresh },
+    );
 
-    const rows = filterRowsByAgencyScope((result.recordset ?? []) as Array<Record<string, unknown>>, scope);
+    const rows = filterRowsByAgencyScope(detailData.rows, scope);
     const total = rows.reduce(
       (s: number, r: Record<string, unknown>) => s + Number(r.valeur ?? 0),
       0,
@@ -744,7 +794,7 @@ export async function GET(
         hasObjectifs,
         agencySettings,
         rows: enrichedRows,
-        trend: trendResult?.recordset ?? null,
+        trend: detailData.trend,
       },
       {
         headers: {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useMemo, useState } from "react";
 import useSWR from "swr";
 import { normalizeHistoricalDate, withAsOfDate } from "@/lib/historical-url";
 
@@ -97,7 +97,7 @@ export function ResultatLedgerClient({
   const asOfDate = normalizeHistoricalDate(searchParams.get("asOfDate"));
   const startDateParam = normalizeDateInput(searchParams.get("startDate"));
   const endDateParam = normalizeDateInput(searchParams.get("endDate"));
-  const detailHref = (href: string) => withAsOfDate(href, asOfDate);
+  const detailHref = useCallback((href: string) => withAsOfDate(href, asOfDate), [asOfDate]);
   const apiUrl = useMemo(() => {
     let url = detailHref(
       `/api/detail/resultat/${encodeURIComponent(normalizedAgencyCode)}/compte/${encodeURIComponent(normalizedAccountNumber)}`,
@@ -108,24 +108,23 @@ export function ResultatLedgerClient({
   }, [detailHref, endDateParam, normalizedAccountNumber, normalizedAgencyCode, startDateParam]);
 
   const { data, error, isLoading } = useSWR(apiUrl, fetcher, { revalidateOnFocus: false });
-  const [startDate, setStartDate] = useState(startDateParam);
-  const [endDate, setEndDate] = useState(endDateParam);
-
-  useEffect(() => {
-    if (!startDateParam && data?.startDate) setStartDate(data.startDate);
-    if (!endDateParam && data?.endDate) setEndDate(data.endDate);
-  }, [data?.endDate, data?.startDate, endDateParam, startDateParam]);
+  const [startDateDraft, setStartDateDraft] = useState("");
+  const [endDateDraft, setEndDateDraft] = useState("");
+  const startDateValue = startDateDraft || startDateParam || data?.startDate || "";
+  const endDateValue = endDateDraft || endDateParam || data?.endDate || "";
 
   function submitPeriod(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     let href = `/detail/resultat/${encodeURIComponent(normalizedAgencyCode)}/compte/${encodeURIComponent(normalizedAccountNumber)}`;
     href = withAsOfDate(href, asOfDate);
-    href = addQuery(href, "startDate", normalizeDateInput(startDate) || null);
-    href = addQuery(href, "endDate", normalizeDateInput(endDate) || null);
+    href = addQuery(href, "startDate", normalizeDateInput(startDateValue) || null);
+    href = addQuery(href, "endDate", normalizeDateInput(endDateValue) || null);
     router.push(href);
   }
 
   function resetPeriod() {
+    setStartDateDraft("");
+    setEndDateDraft("");
     router.push(
       withAsOfDate(
         `/detail/resultat/${encodeURIComponent(normalizedAgencyCode)}/compte/${encodeURIComponent(normalizedAccountNumber)}`,
@@ -225,7 +224,7 @@ export function ResultatLedgerClient({
             <div className="detail-summary-icon">CR</div>
             <div className="detail-summary-label">Credit periode</div>
             <div className="detail-summary-value">{fmtCurrency.format(data.periodCredit)}</div>
-            <div className="detail-summary-sub">Date d'arret : {formatDate(data.asOfDate)}</div>
+            <div className="detail-summary-sub">Date d&apos;arret : {formatDate(data.asOfDate)}</div>
           </div>
         </div>
 
@@ -253,8 +252,8 @@ export function ResultatLedgerClient({
               Date debut
               <input
                 type="date"
-                value={startDate}
-                onChange={(event) => setStartDate(event.target.value)}
+                value={startDateValue}
+                onChange={(event) => setStartDateDraft(event.target.value)}
                 max={data.asOfDate}
                 style={{ minWidth: 170 }}
               />
@@ -263,8 +262,8 @@ export function ResultatLedgerClient({
               Date fin
               <input
                 type="date"
-                value={endDate}
-                onChange={(event) => setEndDate(event.target.value)}
+                value={endDateValue}
+                onChange={(event) => setEndDateDraft(event.target.value)}
                 max={data.asOfDate}
                 style={{ minWidth: 170 }}
               />
