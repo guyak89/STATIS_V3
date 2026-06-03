@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { isAgencyAllowedByScope, resolveAgencyScope } from "@/lib/agency-profiles";
 import { getPool } from "@/lib/db";
-import { addAsOfDateInput, AS_OF_DATE_SQL, parseAsOfDateParam } from "@/lib/as-of-date";
+import { addAsOfDateInput, AS_OF_DATE_SQL, asOfDateCachePart, parseAsOfDateParam } from "@/lib/as-of-date";
+import { sqlCache } from "@/lib/sql-cache";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -51,6 +52,10 @@ export async function GET(
 
   try {
     const requestedAsOfDate = parseAsOfDateParam(req);
+    const forceRefresh = new URL(req.url).searchParams.has("refresh");
+    const recordset = await sqlCache(
+      `detail:souscriptions-tontine:${agencyCode}:${asOfDateCachePart(requestedAsOfDate)}`,
+      async () => {
     const pool = await getPool();
     const result = await addAsOfDateInput(pool.request(), requestedAsOfDate)
       .input("AgencyCode", agencyCode)
@@ -94,7 +99,11 @@ WHERE a.COD_AGENCE COLLATE DATABASE_DEFAULT = @AgencyCode COLLATE DATABASE_DEFAU
 ORDER BY ISNULL(s.subscriptions, 0) DESC, s.collectorCode;
 `);
 
-    const recordset = (result.recordset ?? []) as SqlRow[];
+    return (result.recordset ?? []) as SqlRow[];
+      },
+      undefined,
+      { forceRefresh },
+    );
 
     if (recordset.length === 0) {
       return NextResponse.json(

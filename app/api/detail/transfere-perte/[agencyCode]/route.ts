@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAgencyAllowedByScope, resolveAgencyScope } from "@/lib/agency-profiles";
-import { addAsOfDateInput, AS_OF_DATE_SQL, parseAsOfDateParam } from "@/lib/as-of-date";
+import { addAsOfDateInput, AS_OF_DATE_SQL, asOfDateCachePart, parseAsOfDateParam } from "@/lib/as-of-date";
+import { sqlCache } from "@/lib/sql-cache";
 import { CREDIT_LOSS_TRANSFER_CTE } from "@/lib/credit-loss-transfer-sql";
 import { getPool } from "@/lib/db";
 
@@ -67,6 +68,10 @@ export async function GET(
 
   try {
     const requestedAsOfDate = parseAsOfDateParam(req);
+    const forceRefresh = new URL(req.url).searchParams.has("refresh");
+    const rows = await sqlCache(
+      `detail:transfere-perte:${agencyCode}:${asOfDateCachePart(requestedAsOfDate)}`,
+      async () => {
     const pool = await getPool();
     const result = await addAsOfDateInput(pool.request(), requestedAsOfDate)
       .input("AgencyCode", agencyCode)
@@ -142,7 +147,11 @@ FROM ProductRows
 ORDER BY rowOrder, valeur DESC, name;
 `);
 
-    const rows = (result.recordset ?? []) as SqlRow[];
+    return (result.recordset ?? []) as SqlRow[];
+      },
+      undefined,
+      { forceRefresh },
+    );
     const summaryRows = rows.filter((row) => asString(row.rowType) === "summary");
     const productRows = mapProductRows(rows.filter((row) => asString(row.rowType) === "product"));
 

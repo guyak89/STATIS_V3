@@ -3,7 +3,8 @@ import {
   getPublicAgencySettings,
 } from "@/lib/agency-settings";
 import { isAgencyAllowedByScope, publicAgencyScope, resolveAgencyScope } from "@/lib/agency-profiles";
-import { addAsOfDateInput, AS_OF_DATE_SQL, parseAsOfDateParam } from "@/lib/as-of-date";
+import { addAsOfDateInput, AS_OF_DATE_SQL, asOfDateCachePart, parseAsOfDateParam } from "@/lib/as-of-date";
+import { sqlCache } from "@/lib/sql-cache";
 import { getPool } from "@/lib/db";
 import { MOBILE_MONEY_CTE } from "@/lib/mobile-money-sql";
 
@@ -47,6 +48,10 @@ export async function GET(
       ...getPublicAgencySettings(),
       ...publicAgencyScope(scope),
     };
+    const forceRefresh = new URL(req.url).searchParams.has("refresh");
+    const rows = await sqlCache(
+      `detail:mobile-money:${agencyCode}:${asOfDateCachePart(requestedAsOfDate)}`,
+      async () => {
     const pool = await getPool();
     const result = await addAsOfDateInput(pool.request(), requestedAsOfDate)
       .input("AgencyCode", agencyCode)
@@ -121,7 +126,11 @@ LEFT JOIN CategoryAgg ca
 ORDER BY rowOrder;
 `);
 
-    const rows = (result.recordset ?? []) as SqlRow[];
+    return (result.recordset ?? []) as SqlRow[];
+      },
+      undefined,
+      { forceRefresh },
+    );
     const summary = rows.find((row) => asString(row.rowType) === "summary");
 
     if (!summary) {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAgencyAllowedByScope, resolveAgencyScope } from "@/lib/agency-profiles";
-import { addAsOfDateInput, AS_OF_DATE_SQL, parseAsOfDateParam } from "@/lib/as-of-date";
+import { addAsOfDateInput, AS_OF_DATE_SQL, asOfDateCachePart, parseAsOfDateParam } from "@/lib/as-of-date";
+import { sqlCache } from "@/lib/sql-cache";
 import { getPool } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +45,10 @@ export async function GET(
 
   try {
     const requestedAsOfDate = parseAsOfDateParam(req);
+    const forceRefresh = new URL(req.url).searchParams.has("refresh");
+    const rows = await sqlCache(
+      `detail:resultat:${agencyCode}:${asOfDateCachePart(requestedAsOfDate)}`,
+      async () => {
     const pool = await getPool();
     const result = await addAsOfDateInput(pool.request(), requestedAsOfDate)
       .input("AgencyCode", agencyCode)
@@ -181,7 +186,11 @@ FROM AccountBalances ab
 ORDER BY rowOrder, sectionCode DESC, generalAccountNumber, accountNumber;
 `);
 
-    const rows = (result.recordset ?? []) as SqlRow[];
+    return (result.recordset ?? []) as SqlRow[];
+      },
+      undefined,
+      { forceRefresh },
+    );
     const summary = rows.find((row) => asString(row.rowType) === "summary");
 
     if (!summary) {

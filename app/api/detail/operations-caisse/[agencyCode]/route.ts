@@ -10,7 +10,8 @@ import {
 } from "@/lib/agency-profiles";
 import { CASH_OPERATIONS_CTE } from "@/lib/cash-operations-sql";
 import { getPool } from "@/lib/db";
-import { addAsOfDateInput, AS_OF_DATE_SQL, parseAsOfDateParam } from "@/lib/as-of-date";
+import { addAsOfDateInput, AS_OF_DATE_SQL, asOfDateCachePart, parseAsOfDateParam } from "@/lib/as-of-date";
+import { sqlCache } from "@/lib/sql-cache";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -58,6 +59,10 @@ export async function GET(
       ...getPublicAgencySettings(),
       ...publicAgencyScope(scope),
     };
+    const forceRefresh = new URL(req.url).searchParams.has("refresh");
+    const rows = await sqlCache(
+      `detail:operations-caisse:${agencyCode}:${asOfDateCachePart(requestedAsOfDate)}`,
+      async () => {
     const pool = await getPool();
     const result = await addAsOfDateInput(addAgencyScopeInputs(pool.request(), scope), requestedAsOfDate)
       .input("AgencyCode", agencyCode)
@@ -170,7 +175,11 @@ LEFT JOIN CashDeskAgg agg
 ORDER BY rowOrder, syntheticOrder, valeur DESC, cashDeskCode;
 `);
 
-    const rows = (result.recordset ?? []) as SqlRow[];
+    return (result.recordset ?? []) as SqlRow[];
+      },
+      undefined,
+      { forceRefresh },
+    );
     const summary = rows.find((row) => asString(row.rowType) === "summary");
 
     if (!summary) {
