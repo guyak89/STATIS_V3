@@ -113,3 +113,30 @@ Remaining / next steps:
 - Detail savings cold load is ~62s for the largest agency (inherent HDPM replay over 33k accounts); cached afterward. Could add a longer detail TTL or a nightly precompute of savings balances if a faster first paint is wanted.
 - Other generic/detail endpoints not yet audited for the COLLATE / #temp rules above.
 - Verified via the running dev server on :3000 (Turbopack hot-reloaded the changes); did not re-run `next build` this pass — recommend a `next build` before any release.
+
+### 2026-06-03 - Claude - detail pages timeout analysis
+
+User report: detail pages also time out. Measured all 10 top-level detail endpoints for A07 (a large agency) against the running dev server (first hit, includes Turbopack recompile + cold query):
+
+| endpoint (A07) | time | status |
+| --- | --- | --- |
+| tontine-collecte | 3.2s | OK |
+| mobile-money | 12.1s | OK |
+| resultat | 12.8s | OK |
+| recouvrement | 13.8s | OK |
+| souscriptions-tontine | 13.6s | OK |
+| transfere-perte | 16.2s | OK |
+| decaissements | 23.5s | OK |
+| encours-credit | 24.8s | OK (already cached) |
+| operations-caisse | 28.1s | OK |
+| **stock-perte** | **>60s** | **TIMEOUT** |
+
+Root cause of the timeout (`stock-perte`): the `CREDIT_LOSS_STOCK` chain (DECLAS_HIST window + CREDIT_PERTE recovery join) feeds `StockWithProduct` (joins to PRETS/DEMPRET/PRDT_CRD, all with no-op COLLATE), and `StockWithProduct` was referenced 2× (summary + product CTEs) → the whole chain re-evaluated. The overview `creditLoss` block computes the same chain for ALL agencies in ~6s, so re-evaluation + COLLATE-defeated joins were the killer.
+
+Fix applied — `app/api/detail/stock-perte/[agencyCode]/route.ts`: materialize the per-agency loss-stock-with-product into a single `#temp` (de-collated joins), then build summary + product from it; wrapped in `sqlCache` with `refresh` bypass. Result: `stock-perte/A07` → HTTP 200 in ~39s cold (was >60s/timeout), total 199,192,426 / 514 dossiers / 12 produits, instant when cached. `tsc` + `eslint` clean.
+
+Notes / remaining work for next agent:
+- Grand-livre per account (`resultat/[agencyCode]/compte/[accountNumber]`) returns 200 but its HDPM joins use no-op COLLATE (`h.NUM_CPTE COLLATE = ai.accountNumber COLLATE`) which defeats the single-account index seek → 28M-row scan risk; for a very busy account (70293200A070000002, ~233k ops) it returned a 5.8 MB JSON payload. Recommend: filter HDPM directly by `h.NUM_CPTE = @AccountNumber` (no COLLATE), and consider paginating entries.
+- `resultat/[agencyCode]` materializes nothing — its `AccountBalances` CTE (HDPM×COMPTES, COLLATE join) is referenced 3× (summary + general + account) = 3 HDPM scans. 13s for A07 but will balloon for the faîtière or under dashboard contention. Recommend `#temp` + de-collate.
+- The other top-level routes (decaissements, mobile-money, operations-caisse, recouvrement, resultat, souscriptions-tontine, transfere-perte, tontine-collecte) are 3-28s and have NO cache — add `sqlCache` (like encours-credit/epargne/stock-perte) so repeat views are instant and they don't get starved (→ timeout) when the dashboard refreshes concurrently. The deeper `/produit` and `/[category]` sub-routes reuse the same heavy CTEs and need the same `#temp` + de-collate treatment.
+- Rule reminder (see "SQL performance knowledge"): all string columns are French_CI_AS, so `COLLATE DATABASE_DEFAULT` on join keys is always a removable no-op that defeats index seeks.
