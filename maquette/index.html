@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Maquette - Dashboard Perfect bordeaux</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="app-header">
+        <div class="header-brand">
+          <div class="brand-logo">BI</div>
+          <div>
+            <div class="brand-name">BASE_INTERCO</div>
+            <div class="brand-sub">Dashboard temps reel</div>
+          </div>
+        </div>
+
+        <div class="header-sep"></div>
+
+        <div class="header-center">
+          <div class="header-chip">
+            <span class="chip-label">Date situation</span>
+            <span class="chip-value accent">07/05/2026</span>
+          </div>
+          <div class="header-chip">
+            <span class="chip-label">Periode</span>
+            <span class="chip-value">Mai 2026</span>
+          </div>
+          <div class="header-chip">
+            <span class="chip-label">Mutuelles</span>
+            <span class="chip-value">12 actives</span>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <div class="live-indicator">
+            <span class="live-dot syncing"></span>
+            <span>Actualise</span>
+          </div>
+          <button class="refresh-btn" type="button">
+            <span class="refresh-icon">R</span>
+            Actualiser
+          </button>
+          <a class="settings-link" href="#">Parametres SQL</a>
+        </div>
+      </header>
+
+      <main class="app-content fade-in">
+        <section>
+          <div class="section-head">
+            <span class="section-title">Vue d'ensemble</span>
+            <span class="section-badge">Temps reel · 5 min</span>
+          </div>
+          <div class="kpi-grid">
+            <a class="kpi-card card-link" href="#" style="--card-top: var(--burgundy); --card-glow: var(--burgundy-soft); --icon-bg: var(--burgundy-soft)">
+              <div class="kpi-icon">AD</div>
+              <div class="kpi-label">Nouvelles Adhesions</div>
+              <div class="kpi-value">1 284</div>
+              <div class="kpi-detail">48 720 membres au total</div>
+              <div class="kpi-sub">Ce mois · Mai 2026</div>
+              <div class="card-drill-hint">Voir le detail -></div>
+            </a>
+            <a class="kpi-card card-link" href="#" style="--card-top: var(--blue); --card-glow: var(--blue-soft); --icon-bg: var(--blue-soft)">
+              <div class="kpi-icon">CR</div>
+              <div class="kpi-label">Encours Credit</div>
+              <div class="kpi-value">2,87 Md XOF</div>
+              <div class="kpi-detail">Portefeuille net a la date d'arret</div>
+              <div class="card-drill-hint">Voir le detail -></div>
+            </a>
+            <a class="kpi-card card-link" href="#" style="--card-top: var(--rose); --card-glow: var(--rose-soft); --icon-bg: var(--rose-soft)">
+              <div class="kpi-icon">EP</div>
+              <div class="kpi-label">Encours Epargne</div>
+              <div class="kpi-value">4,13 Md XOF</div>
+              <div class="kpi-detail">Snapshot solde disponible</div>
+              <div class="card-drill-hint">Voir le detail -></div>
+            </a>
+            <a class="kpi-card card-link" href="#" style="--card-top: var(--purple); --card-glow: var(--purple-soft); --icon-bg: var(--purple-soft)">
+              <div class="kpi-icon">RS</div>
+              <div class="kpi-label">Resultat</div>
+              <div class="kpi-value">83,6 M XOF</div>
+              <div class="kpi-detail">Comptes de resultat 591 / 592</div>
+              <div class="kpi-sub">Dernier SOLDPERI disponible</div>
+              <div class="card-drill-hint">Voir le detail -></div>
+            </a>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-head">
+            <span class="section-title">Qualite du Portefeuille</span>
+            <span class="section-badge">PAR - Portfolio at Risk</span>
+          </div>
+          <div class="par-grid">
+            <a class="par-card risk-faible card-link" href="#">
+              <div class="par-header">
+                <span class="par-label">PAR a 1 Jour</span>
+                <span class="risk-badge risk-faible">FAIBLE</span>
+              </div>
+              <div class="par-rate">2,18 %</div>
+              <div class="par-bar-track"><div class="par-bar-fill c-burgundy" style="width: 22%"></div></div>
+              <div class="par-amount">62 480 000 XOF</div>
+              <div class="par-sub">sur 2,87 Md XOF d'encours</div>
+              <div class="card-drill-hint">Voir le detail -></div>
+            </a>
+            <a class="par-card risk-modere card-link" href="#">
+              <div class="par-header">
+                <span class="par-label">PAR a 30 Jours</span>
+                <span class="risk-badge risk-modere">MODERE</span>
+              </div>
+              <div class="par-rate">4,63 %</div>
+              <div class="par-bar-track"><div class="par-bar-fill c-amber" style="width: 46%"></div></div>
+              <div class="par-amount">132 780 000 XOF</div>
+              <div class="par-sub">sur 2,87 Md XOF d'encours</div>
+              <div class="card-drill-hint">Voir le detail -></div>
+            </a>
+            <a class="par-card risk-eleve card-link" href="#">
+              <div class="par-header">
+                <span class="par-label">PAR a 90 Jours</span>
+                <span class="risk-badge risk-eleve">ELEVE</span>
+              </div>
+              <div class="par-rate">8,42 %</div>
+              <div class="par-bar-track"><div class="par-bar-fill c-red" style="width: 84%"></div></div>
+              <div class="par-amount">241 610 000 XOF</div>
+              <div class="par-sub">sur 2,87 Md XOF d'encours</div>
+              <div class="card-drill-hint">Voir le detail -></div>
+            </a>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-head">
+            <span class="section-title">Activite Operationnelle</span>
+            <span class="section-badge">Mois en cours · Mai 2026</span>
+          </div>
+          <div class="ops-grid">
+            <a class="ops-card card-link" href="#">
+              <div class="ops-icon-wrap blue">DE</div>
+              <div class="ops-label">Decaissements</div>
+              <div class="ops-value">392,5 M XOF</div>
+              <div class="ops-detail">418 operation(s)</div>
+              <div class="card-drill-hint">Voir le detail -></div>
+            </a>
+            <a class="ops-card card-link" href="detail.html">
+              <div class="ops-icon-wrap burgundy">TC</div>
+              <div class="ops-label">Collecte Tontine</div>
+              <div class="ops-value">54,8 M XOF</div>
+              <div class="ops-detail">22 846 versement(s)</div>
+              <div class="card-drill-hint">Voir le detail -></div>
+            </a>
+            <a class="ops-card card-link" href="#">
+              <div class="ops-icon-wrap purple">ST</div>
+              <div class="ops-label">Souscriptions Tontine</div>
+              <div class="ops-value">2 918</div>
+              <div class="ops-detail">Nouvelles souscriptions tontine</div>
+              <div class="card-drill-hint">Voir le detail -></div>
+            </a>
+            <a class="ops-card card-link" href="#">
+              <div class="ops-icon-wrap amber">IM</div>
+              <div class="ops-label">Impayes</div>
+              <div class="ops-value">118,4 M XOF</div>
+              <div class="ops-detail">Echeances dues non soldees</div>
+              <div class="card-drill-hint">Voir le detail -></div>
+            </a>
+            <a class="ops-card card-link" href="#">
+              <div class="ops-icon-wrap red">SP</div>
+              <div class="ops-label">Stock Credit en Perte</div>
+              <div class="ops-value">78,2 M XOF</div>
+              <div class="ops-detail">Cumul CREDIT_PERTE</div>
+              <div class="card-drill-hint">Voir le detail -></div>
+            </a>
+            <a class="ops-card card-link" href="#">
+              <div class="ops-icon-wrap red">TP</div>
+              <div class="ops-label">Transfere en Perte</div>
+              <div class="ops-value">6,7 M XOF</div>
+              <div class="ops-detail">12 dossier(s) ce mois</div>
+              <div class="card-drill-hint">Voir le detail -></div>
+            </a>
+            <a class="ops-card card-link" href="#">
+              <div class="ops-icon-wrap rose">RC</div>
+              <div class="ops-label">Recouvrement</div>
+              <div class="ops-value">24,6 M XOF</div>
+              <div class="ops-detail">143 operation(s) ce mois</div>
+              <div class="card-drill-hint">Voir le detail -></div>
+            </a>
+            <a class="ops-card card-link" href="#">
+              <div class="ops-icon-wrap orange">AG</div>
+              <div class="ops-label">Agences / Mutuelles</div>
+              <div class="ops-value">12</div>
+              <div class="ops-detail">Voir la repartition des adherents</div>
+              <div class="card-drill-hint">Voir le detail -></div>
+            </a>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-head">
+            <span class="section-title">Evolution</span>
+          </div>
+          <div class="charts-row">
+            <article class="panel">
+              <div class="panel-header">
+                <div>
+                  <div class="panel-kicker">Croissance</div>
+                  <div class="panel-title">Adhesions sur 12 mois</div>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div class="area-chart mock-chart">
+                  <span style="height: 28%"></span>
+                  <span style="height: 44%"></span>
+                  <span style="height: 38%"></span>
+                  <span style="height: 52%"></span>
+                  <span style="height: 61%"></span>
+                  <span style="height: 57%"></span>
+                  <span style="height: 72%"></span>
+                  <span style="height: 68%"></span>
+                  <span style="height: 84%"></span>
+                  <span style="height: 78%"></span>
+                  <span style="height: 88%"></span>
+                  <span style="height: 92%"></span>
+                </div>
+              </div>
+            </article>
+            <article class="panel">
+              <div class="panel-header">
+                <div>
+                  <div class="panel-kicker">Flux de credit</div>
+                  <div class="panel-title">Decaissements sur 6 mois</div>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div class="bar-chart mock-chart">
+                  <span style="height: 42%"></span>
+                  <span style="height: 58%"></span>
+                  <span style="height: 51%"></span>
+                  <span style="height: 77%"></span>
+                  <span style="height: 65%"></span>
+                  <span style="height: 88%"></span>
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-head">
+            <span class="section-title">Analyse du Portefeuille</span>
+          </div>
+          <div class="charts-row">
+            <article class="panel">
+              <div class="panel-header">
+                <div>
+                  <div class="panel-kicker">Risque</div>
+                  <div class="panel-title">Comparatif PAR - Montants a risque</div>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div class="risk-bars">
+                  <div><span>PAR 1J</span><b style="width: 28%"></b><strong>62,4 M</strong></div>
+                  <div><span>PAR 30J</span><b style="width: 56%"></b><strong>132,7 M</strong></div>
+                  <div><span>PAR 90J</span><b style="width: 84%"></b><strong>241,6 M</strong></div>
+                </div>
+              </div>
+            </article>
+            <article class="panel">
+              <div class="panel-header">
+                <div>
+                  <div class="panel-kicker">Structure</div>
+                  <div class="panel-title">Repartition par statut de pret</div>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div class="donut-block">
+                  <div class="donut-center">
+                    <div class="donut-value">1 942</div>
+                    <div class="donut-label">Dossiers</div>
+                  </div>
+                </div>
+                <div class="legend-strip">
+                  <span><i class="legend-dot burgundy"></i> Decaisse sain 1 320</span>
+                  <span><i class="legend-dot amber"></i> Souffrant 438</span>
+                  <span><i class="legend-dot red"></i> En perte 184</span>
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-head">
+            <span class="section-title">Performance par Agence</span>
+          </div>
+          <div class="panel">
+            <div class="agency-row">
+              <div class="agency-chart-wrap">
+                <div class="panel-kicker">Adherents par agence</div>
+                <div class="panel-title">Top agences</div>
+                <div class="horizontal-chart">
+                  <div><span>A07</span><b style="width: 100%"></b><strong>8 204</strong></div>
+                  <div><span>A08</span><b style="width: 82%"></b><strong>6 748</strong></div>
+                  <div><span>A01</span><b style="width: 74%"></b><strong>6 090</strong></div>
+                  <div><span>A12</span><b style="width: 61%"></b><strong>5 012</strong></div>
+                  <div><span>A05</span><b style="width: 54%"></b><strong>4 438</strong></div>
+                </div>
+              </div>
+              <div class="agency-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Agence</th>
+                      <th>Adherents</th>
+                      <th>Prets actifs</th>
+                      <th>Encours credit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><span class="rank-chip top-1">1</span></td>
+                      <td><div class="td-agency"><strong>A07</strong><span>Agoe</span></div></td>
+                      <td class="td-num">8 204</td>
+                      <td class="td-num">362</td>
+                      <td class="td-amount">291,8 M XOF</td>
+                    </tr>
+                    <tr>
+                      <td><span class="rank-chip top-2">2</span></td>
+                      <td><div class="td-agency"><strong>A08</strong><span>Zio</span></div></td>
+                      <td class="td-num">6 748</td>
+                      <td class="td-num">304</td>
+                      <td class="td-amount">246,5 M XOF</td>
+                    </tr>
+                    <tr>
+                      <td><span class="rank-chip top-3">3</span></td>
+                      <td><div class="td-agency"><strong>A01</strong><span>Mutuelle Avenir</span></div></td>
+                      <td class="td-num">6 090</td>
+                      <td class="td-num">288</td>
+                      <td class="td-amount">184,2 M XOF</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="app-footer">
+        <span>BASE_INTERCO · Dashboard temps reel</span>
+        <span class="footer-dot"></span>
+        <span>Maquette statique · Palette bordeaux claire</span>
+        <span class="footer-dot"></span>
+        <span>Disposition calquee sur la production</span>
+      </footer>
+    </div>
+  </body>
+</html>

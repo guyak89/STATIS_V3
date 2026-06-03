@@ -1,0 +1,37 @@
+{
+  "name": "sqldata",
+  "version": "1.0.0",
+  "description": "Dashboard temps reel BASE_INTERCO",
+  "scripts": {
+    "dev": ".tools\\node-v22.16.0-win-x64\\node.exe node_modules\\next\\dist\\bin\\next dev",
+    "build": ".tools\\node-v22.16.0-win-x64\\node.exe node_modules\\next\\dist\\bin\\next build",
+    "start": ".tools\\node-v22.16.0-win-x64\\node.exe node_modules\\next\\dist\\bin\\next start",
+    "lint": "eslint ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "better-sqlite3": "^12.9.0",
+    "exceljs": "^4.4.0",
+    "mssql": "^12.2.1",
+    "next": "^16.2.3",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "recharts": "^3.8.1",
+    "swr": "^2.4.1",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.5",
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "browserslist": "^4.28.2",
+    "caniuse-lite": "^1.0.30001787",
+    "eslint": "^9.39.1",
+    "eslint-config-next": "^16.2.3",
+    "typescript": "^6.0.2"
+  }
+}
